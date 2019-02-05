@@ -3,8 +3,8 @@ module Exercises where
 import Prelude
 
 import Data.Array ((..), null, filter)
-import Data.Array.Partial (tail)
-import Data.Foldable (product)
+import Data.Array.Partial (head, tail)
+import Data.Foldable (product, foldl, foldr)
 import Partial.Unsafe (unsafePartial)
 import Control.MonadZero (guard)
 
@@ -55,3 +55,24 @@ triples n = do
   c <- b .. n
   guard $ c * c == a * a + b * b
   pure [a, b, c]
+
+allTrue :: Array Boolean -> Boolean
+allTrue = foldr (==) true
+
+-- xs = [false]
+-- (foldl (==) false xs) === true
+
+count :: forall a. (a -> Boolean) -> Array a -> Int
+count _ [] = 0
+count p xs = if p (unsafePartial head xs)
+               then count p (unsafePartial tail xs) + 1
+               else count p (unsafePartial tail xs)
+
+count' :: forall a. (a -> Boolean) -> Array a -> Int
+count' = count'' 0
+  where
+    count'' acc _ [] = acc
+    count'' acc p xs = count'' (acc + if p (unsafePartial head xs) then 1 else 0) p (unsafePartial tail xs)
+
+reverse :: forall a. Array a -> Array a
+reverse = foldl (\xs x -> [x] <> xs) []
