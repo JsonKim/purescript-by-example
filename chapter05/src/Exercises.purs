@@ -2,6 +2,8 @@ module Exercises where
 
 import Prelude
 
+import Partial.Unsafe (unsafePartial)
+
 type Address = { street :: String, city :: String }
 type Person = { name :: String, address :: Address }
 
@@ -49,3 +51,7 @@ sameCity' a b = (getCity a) == (getCity b)
 fromSingleton :: forall a. a -> Array a -> a
 fromSingleton _ [x] = x
 fromSingleton d _   = d
+
+partialTest :: Boolean -> Boolean
+partialTest = unsafePartial \true -> true
+-- partialTest true = true
