@@ -2,11 +2,12 @@ module Data.AddressBook.Validation where
   
 import Prelude
 
-import Data.AddressBook (Address(..), PhoneNumber(..), address, phoneNumber)
+import Data.AddressBook (Address(..), PhoneNumber(..), Person(..), address, phoneNumber, person)
 import Data.Either (Either(..))
 import Data.String (length)
 import Data.String.Regex (Regex, test, regex)
 import Data.String.Regex.Flags (noFlags)
+import Data.Traversable (traverse)
 import Data.Validation.Semigroup (V, invalid)
 import Partial.Unsafe (unsafePartial)
 
@@ -56,3 +57,16 @@ entirelyWhitespaceRegex =
   unsafePartial
     case regex "^[^\\s].*[^\\s]$" noFlags of
       Right r -> r
+
+arrayNonEmpty :: forall a. String -> Array a -> V Errors Unit
+arrayNonEmpty field [] =
+  invalid ["Field '" <> field <> "' must contain at least one value"]
+arrayNonEmpty _ _ = pure unit
+
+validatePerson :: Person -> V Errors Person
+validatePerson (Person o) =
+  person <$> (nonEmpty "First Name" o.firstName *> pure o.firstName)
+         <*> (nonEmpty "Last Name"  o.lastName  *> pure o.lastName)
+         <*> validateAddress o.homeAddress
+         <*> (arrayNonEmpty "Phone Numbers" o.phones *>
+              traverse validatePhoneNumber o.phones)
