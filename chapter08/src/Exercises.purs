@@ -60,6 +60,10 @@ filterM p (x:xs) = do
 
 -- m         >>= pure = m                       -> right identity
 -- (m >>= f) >>= g    = m >>= (\x -> f x >>= g) -> associativity
+-- 결국 m = pure a 일때 아래와 같이 적을 수 있다.
+-- (pure a >>= f) >>= g    = pure a >>= (\x -> f x >>= g) -> associativity
+-- left identity와 치환에 의해서
+-- (f a >>= g) = (f a >>= g)
 
 -- f :: a -> b -> c
 -- lift2 f a b = f <$> a <*> b
