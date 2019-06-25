@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Array (head, nub, sort, tail)
 import Data.List (List(..), (:), fromFoldable)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 
 foldM :: forall m a b. Monad m => (a -> b -> m a) -> a -> List b -> m a
 foldM _ a Nil = pure a
@@ -43,14 +43,23 @@ filterM p (x:xs) = do
 -- pure a    >>= (\a -> pure (f a)) = pure (f a)
 -- * 따라서 bind가 있다면 map은 아래와 같이 쓸 수 있다.
 -- map f a = a >>= (\x -> pure (f x))
+-- map f a = do
+--   x <- a
+--   pure (f x)
+
 -- * 또한, apply도 아래와 같다.
--- apply  m a = m >>= (\f -> a >>= (\x -> pure (f x)))
--- apply' m a = m >>= (\f -> map f a)
+-- apply m a = m >>= (\f -> a >>= (\x -> pure (f x)))
+-- apply m a = m >>= (\f -> map f a)
+-- apply m a = do
+--   f <- m
+--   map f a
+-- apply m a = do
+--   f <- m
+--   x <- a
+--   pure (f x)
 
 -- m         >>= pure = m                       -> right identity
 -- (m >>= f) >>= g    = m >>= (\x -> f x >>= g) -> associativity
-
--- apply m a = m >>= (\f -> a >>= (\x -> pure (f x)))
 
 -- f :: a -> b -> c
 -- lift2 f a b = f <$> a <*> b
