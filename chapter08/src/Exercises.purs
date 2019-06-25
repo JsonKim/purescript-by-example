@@ -64,6 +64,27 @@ filterM p (x:xs) = do
 -- (pure a >>= f) >>= g    = pure a >>= (\x -> f x >>= g) -> associativity
 -- left identity와 치환에 의해서
 -- (f a >>= g) = (f a >>= g)
+-- 연산자를 flip하면
+-- g =<< (f =<< pure a)
+-- g =<< f a
+-- 이는 곧 모나드 함수들간의 합성을 의미한다.
+
+-- 여기서 결국 kleisli compostion이 유도된다.
+-- (>=>) :: forall a b c m. Monad m => (a -> m b) -> (b -> m c) -> a -> m c
+-- (>=>) f g a = f a >>= g
+-- (>=>) f g a = do
+--   x <- f a
+--   g x
+
+-- pure >=> f     = f  -> left identity
+-- f    >=> pure  = f  -> right identity
+-- (f >=> g) >=> h = f >=> (g >=> h) -> associativity
+
+-- f >=> g
+-- \a -> (f a >>= g)
+-- pure a >>= (\x -> f x >>= g) -> 결합법칙 오른쪽
+-- pure a >>= (f >=> g)
+-- (f >=> g) a = (f a >>= g)
 
 -- f :: a -> b -> c
 -- lift2 f a b = f <$> a <*> b
