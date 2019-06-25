@@ -76,3 +76,11 @@ filterM p (x:xs) = do
 -- (pure b) >>= (\b -> pure ((f a) b))
 -- pure ((f a) b) -> left identity
 -- pure (f a b)
+
+-- 함수 형태로 작성
+-- map f (pure a) = pure (f a)
+-- ap (pure f) (pure b) = pure (f b)
+
+-- ap (map f (pure a)) (pure b)
+-- ap (pure (f a)) (pure b)
+-- pure ((f a) b)
