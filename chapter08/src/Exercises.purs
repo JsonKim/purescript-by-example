@@ -2,7 +2,7 @@ module Exercises where
 
 import Prelude
 
-import Data.Array (head, tail)
+import Data.Array (head, nub, sort, tail)
 import Data.List (List(..), (:), fromFoldable)
 import Data.Maybe (Maybe)
 
@@ -18,8 +18,8 @@ third arr = do
   r2 <- tail r1
   head r2
 
-add :: Int -> Int -> Array Int
-add x y = [x, y, x+y]
+add' :: Int -> Int -> Array Int
+add' x y = [x, x+y]
 
 sums :: Array Int -> Array Int
-sums xs = foldM add 0 (fromFoldable xs)
+sums xs = sort <<< nub $ foldM add' 0 (fromFoldable xs)
