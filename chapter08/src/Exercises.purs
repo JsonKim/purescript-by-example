@@ -1,12 +1,18 @@
 module Exercises where
 
-import Prelude
+import Prelude hiding (add)
 
 import Control.Monad.ST (for, run)
-import Control.Monad.ST.Ref as Ref
-import Data.Array (head, length, nub, sort, tail)
+import Control.Monad.ST.Ref as STRef
+import Data.Array (head, tail, nub, sort)
+import Data.Int (toNumber)
 import Data.List (List(..), (:), fromFoldable)
 import Data.Maybe (Maybe)
+import Effect (Effect, forE)
+import Effect.Exception (error, throwException)
+import Effect.Random (random)
+import Effect.Ref as Ref
+import Math (pow)
 
 foldM :: forall m a b. Monad m => (a -> b -> m a) -> a -> List b -> m a
 foldM _ a Nil = pure a
@@ -117,27 +123,47 @@ filterM p (x:xs) = do
 -- ap (pure (f a)) (pure b)
 -- pure ((f a) b)
 
-sumOfSquares :: Int
-sumOfSquares = run do
-  total <- Ref.new 0
-  Ref.read total
+filterM :: forall m a. Monad m => (a -> m Boolean) -> List a -> m (List a)
+filterM _ Nil = pure Nil
+filterM p (x : xs) = do
+  b <- p x
+  xs' <- filterM p xs
+  pure if b then x : xs' else xs'
 
 simulate :: Number -> Number -> Int -> Number
 simulate x0 v0 time = run do
-  ref <- Ref.new { x: x0, v: v0 }
+  ref <- STRef.new { x: x0, v: v0 }
   for 0 (time * 1000) \_ -> do
-    Ref.modify (\o ->
+    _ <- STRef.modify (\o ->  
       { v: o.v - 9.81 * 0.001
-      , x: o.x + o.v * 0.001
-      }
-    ) ref
-
-  final <- Ref.read ref
+      , x: o.x + o.v * 0.001  
+      }) ref
+    pure unit  
+  final <- STRef.read ref
   pure final.x
 
-check1 f l1 l2 = (f l1) == (f l2)
-x1 = check1 length [1,2,3] [2,3,4]
+safeDivide :: Int -> Int -> Effect Int
+safeDivide _ 0 = throwException $ error "do not divide by 0"
+safeDivide x y = pure (x / y)
 
-check2 :: ∀ e. Eq e ⇒ (forall c. Array c → e) → (forall a. Array a) → (forall b. Array b) → Boolean
-check2 f l1 l2 = (f l1) == (f l2)
-x2 = check2 length [1,2,3] ["1"]
+data Point = Point Number Number
+
+estimatePi :: Int -> Effect Number
+estimatePi n = do
+  pointsInCircle <- Ref.new 0
+  forE 0 n $ \_ -> do
+    point <- createPoint
+    Ref.modify_ (\x -> x + if isInCircle point then 1 else 0) pointsInCircle
+
+  final <- Ref.read pointsInCircle
+  pure ((4.0 * (toNumber final)) / (toNumber n))
+
+  where
+    createPoint :: Effect Point
+    createPoint = do
+      x <- random
+      y <- random
+      pure (Point x y)
+
+    isInCircle :: Point -> Boolean
+    isInCircle (Point x y) = ((x - 0.5) `pow` 2.0) + ((y - 0.5) `pow` 2.0) < (0.5 `pow` 2.0)
