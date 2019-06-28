@@ -1,0 +1,14 @@
+{
+  "name": "chapter08",
+  "version": "1.0.0",
+  "dependencies": {
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "build": "pulp browserify --to html/index.js"
+  },
+  "author": "Jason Kim",
+  "license": "ISC"
+}
