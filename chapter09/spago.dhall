@@ -13,6 +13,9 @@ You can edit this file as you like.
     , "math"
     , "psci-support"
     , "random"
+    , "refs"
+    , "web-dom"
+    , "web-html"
     ]
 , packages =
     ./packages.dhall
