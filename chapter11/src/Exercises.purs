@@ -2,17 +2,19 @@ module Exercises where
 
 import Prelude
 
-import Control.Monad.Except (ExceptT, throwError)
+import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (Reader, ask, lift, local, runReader)
-import Control.Monad.State (State, StateT, evalState, execState, get, modify, put, runState)
-import Control.Monad.Writer (Writer, tell)
+import Control.Monad.State (State, StateT, evalState, execState, get, modify, put, runState, runStateT)
+import Control.Monad.Writer (Writer, WriterT, runWriterT, tell)
 import Data.Array (replicate)
 import Data.Either (Either(..))
 import Data.Foldable (traverse_)
+import Data.Identity (Identity)
 import Data.Int (even, odd)
 import Data.Maybe (Maybe(..))
 import Data.Monoid.Additive (Additive(..))
-import Data.String (drop, joinWith, take)
+import Data.Newtype (unwrap)
+import Data.String (Pattern(..), drop, joinWith, stripPrefix, take)
 import Data.String.CodeUnits (toCharArray)
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple)
@@ -141,3 +143,39 @@ writerAndExceptT = do
   _ <- throwError "Error!"
   lift $ tell ["After the error"] 
   pure "Return value"
+
+type Errors = Array String
+type Log = Array String
+type Parser = StateT String (WriterT Log (ExceptT Errors Identity))
+
+split' :: Parser String
+split' = do
+  s <- get
+  lift $ tell ["The state is " <> s]
+  case s of
+    "" -> lift $ lift $ throwError ["Empty string"]
+    _  -> do
+      put  (drop 1 s)
+      pure (take 1 s)
+
+runParser :: Parser String -> String -> Either Errors (Tuple (Tuple String String) Log)
+runParser p s = unwrap $ runExceptT $ runWriterT $ runStateT p s
+
+safeDivide :: Int -> Int -> ExceptT String Identity Int
+safeDivide _ 0 = throwError "Error!"
+safeDivide x y = do
+  pure (x / y)
+
+string :: String -> Parser String
+string prefix = do
+  s <- get
+  lift $ tell ["The state is " <> s]
+  case s of
+    "" -> lift $ lift $ throwError ["Empty string"]
+    _  ->
+      case match of
+        Nothing -> lift $ lift $ throwError ["not match prefix"]
+        (Just rest) -> do
+          put rest
+          pure prefix
+        where match = stripPrefix (Pattern prefix) s
