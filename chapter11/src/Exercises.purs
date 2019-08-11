@@ -158,7 +158,7 @@ split' = do
       put  (drop 1 s)
       pure (take 1 s)
 
-runParser :: Parser String -> String -> Either Errors (Tuple (Tuple String String) Log)
+runParser :: forall a. Monoid a => Parser a -> String -> Either Errors (Tuple (Tuple a String) Log)
 runParser p s = unwrap $ runExceptT $ runWriterT $ runStateT p s
 
 safeDivide :: Int -> Int -> ExceptT String Identity Int
