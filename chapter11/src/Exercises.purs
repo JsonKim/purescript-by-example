@@ -6,6 +6,7 @@ import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (Reader, ask, lift, local, runReader)
 import Control.Monad.State (State, StateT, evalState, execState, get, modify, put, runState, runStateT)
 import Control.Monad.Writer (Writer, WriterT, runWriterT, tell)
+import Control.MonadZero (guard)
 import Data.Array (replicate)
 import Data.Either (Either(..))
 import Data.Foldable (traverse_)
@@ -14,7 +15,7 @@ import Data.Int (even, odd)
 import Data.Maybe (Maybe(..))
 import Data.Monoid.Additive (Additive(..))
 import Data.Newtype (unwrap)
-import Data.String (Pattern(..), drop, joinWith, stripPrefix, take)
+import Data.String (Pattern(..), drop, joinWith, stripPrefix, take, toUpper)
 import Data.String.CodeUnits (toCharArray)
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple)
@@ -179,3 +180,9 @@ string prefix = do
           put rest
           pure prefix
         where match = stripPrefix (Pattern prefix) s
+
+upper :: Parser String
+upper = do
+  s <- split'
+  guard $ toUpper s == s
+  pure s
