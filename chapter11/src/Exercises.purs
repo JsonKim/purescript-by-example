@@ -4,9 +4,12 @@ import Prelude
 
 import Control.Monad.Reader (Reader, ask, local, runReader)
 import Control.Monad.State (State, evalState, execState, modify, runState)
+import Control.Monad.Writer (Writer, tell)
 import Data.Array (replicate)
 import Data.Foldable (traverse_)
+import Data.Int (even, odd)
 import Data.Maybe (Maybe(..))
+import Data.Monoid.Additive (Additive(..))
 import Data.String (joinWith)
 import Data.String.CodeUnits (toCharArray)
 import Data.Traversable (sequence)
@@ -91,3 +94,32 @@ testDoc = [ line "Here is some indented text:"
 
 z :: DocA (Array String)
 z = sequence testDoc
+
+gcd :: Int -> Int -> Int
+gcd n 0 = n
+gcd 0 m = m
+gcd n m = if n > m
+            then gcd (n - m) m
+            else gcd n (m - n)
+
+gcdLog :: Int -> Int -> Writer (Array String) Int
+gcdLog n 0 = pure n
+gcdLog 0 m = pure m
+gcdLog n m = do
+  tell ["gcdLog " <> show n <> " " <> show m]
+  if n > m
+    then gcdLog (n - m) m
+    else gcdLog n (m - n)
+
+sumArray' :: Array Int -> Writer (Additive Int) Unit
+sumArray' = traverse_ $ \n -> tell (Additive n)
+
+collatz :: Int -> Writer (Array Int) Unit
+collatz 1 = tell [1]
+collatz n | even n = do
+  tell [n]
+  collatz (n / 2)
+collatz n | odd n = do
+  tell [n]
+  collatz (n * 3 + 1)
+collatz _ = tell [0]
