@@ -2,15 +2,16 @@ module Exercises where
 
 import Prelude
 
-import Control.Monad.Reader (Reader, ask, local, runReader)
-import Control.Monad.State (State, evalState, execState, modify, runState)
+import Control.Monad.Reader (Reader, ask, lift, local, runReader)
+import Control.Monad.State (State, StateT, evalState, execState, get, modify, put, runState)
 import Control.Monad.Writer (Writer, tell)
 import Data.Array (replicate)
+import Data.Either (Either(..))
 import Data.Foldable (traverse_)
 import Data.Int (even, odd)
 import Data.Maybe (Maybe(..))
 import Data.Monoid.Additive (Additive(..))
-import Data.String (joinWith)
+import Data.String (drop, joinWith, take)
 import Data.String.CodeUnits (toCharArray)
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple)
@@ -123,3 +124,13 @@ collatz n | odd n = do
   tell [n]
   collatz (n * 3 + 1)
 collatz _ = tell [0]
+
+split :: StateT String (Either String) String
+split = do
+  s <- get
+  case s of
+    "" -> lift $ Left "Empty string"
+    _  -> do
+      put  (drop 1 s)
+      pure (take 1 s)
+ 
