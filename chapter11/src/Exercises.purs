@@ -139,9 +139,9 @@ split = do
 
 writerAndExceptT :: ExceptT String (Writer (Array String)) String
 writerAndExceptT = do
-  lift $ tell ["Before the error"] 
+  tell ["Before the error"] 
   _ <- throwError "Error!"
-  lift $ tell ["After the error"] 
+  tell ["After the error"] 
   pure "Return value"
 
 type Errors = Array String
@@ -151,9 +151,9 @@ type Parser = StateT String (WriterT Log (ExceptT Errors Identity))
 split' :: Parser String
 split' = do
   s <- get
-  lift $ tell ["The state is " <> s]
+  tell ["The state is " <> s]
   case s of
-    "" -> lift $ lift $ throwError ["Empty string"]
+    "" -> throwError ["Empty string"]
     _  -> do
       put  (drop 1 s)
       pure (take 1 s)
@@ -169,12 +169,12 @@ safeDivide x y = do
 string :: String -> Parser String
 string prefix = do
   s <- get
-  lift $ tell ["The state is " <> s]
+  tell ["The state is " <> s]
   case s of
-    "" -> lift $ lift $ throwError ["Empty string"]
+    "" -> throwError ["Empty string"]
     _  ->
       case match of
-        Nothing -> lift $ lift $ throwError ["not match prefix"]
+        Nothing -> throwError ["not match prefix"]
         (Just rest) -> do
           put rest
           pure prefix
