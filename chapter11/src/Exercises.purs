@@ -2,6 +2,7 @@ module Exercises where
 
 import Prelude
 
+import Control.Monad.Except (ExceptT, throwError)
 import Control.Monad.Reader (Reader, ask, lift, local, runReader)
 import Control.Monad.State (State, StateT, evalState, execState, get, modify, put, runState)
 import Control.Monad.Writer (Writer, tell)
@@ -133,4 +134,10 @@ split = do
     _  -> do
       put  (drop 1 s)
       pure (take 1 s)
- 
+
+writerAndExceptT :: ExceptT String (Writer (Array String)) String
+writerAndExceptT = do
+  lift $ tell ["Before the error"] 
+  _ <- throwError "Error!"
+  lift $ tell ["After the error"] 
+  pure "Return value"
