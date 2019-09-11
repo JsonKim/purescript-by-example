@@ -6,8 +6,8 @@ import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (Reader, ask, lift, local, runReader)
 import Control.Monad.State (State, StateT, evalState, execState, get, modify, put, runState, runStateT)
 import Control.Monad.Writer (Writer, WriterT, runWriterT, tell)
-import Control.MonadZero (guard)
-import Data.Array (replicate)
+import Control.MonadZero ((<|>), guard)
+import Data.Array (length, many, replicate, some)
 import Data.Either (Either(..))
 import Data.Foldable (traverse_)
 import Data.Identity (Identity)
@@ -15,10 +15,10 @@ import Data.Int (even, odd)
 import Data.Maybe (Maybe(..))
 import Data.Monoid.Additive (Additive(..))
 import Data.Newtype (unwrap)
-import Data.String (Pattern(..), drop, joinWith, stripPrefix, take, toUpper)
+import Data.String (Pattern(..), drop, joinWith, stripPrefix, take, toLower, toUpper)
 import Data.String.CodeUnits (toCharArray)
 import Data.Traversable (sequence)
-import Data.Tuple (Tuple)
+import Data.Tuple (Tuple(..))
 
 modifySum :: Int -> State Int Int
 modifySum n = modify \sum -> sum + n
@@ -186,3 +186,38 @@ upper = do
   s <- split'
   guard $ toUpper s == s
   pure s
+
+lower :: Parser String
+lower = do
+  s <- split'
+  guard $ toLower s == s
+  pure s
+
+upperOrLower :: Parser (Array String)
+upperOrLower = some upper <|> some lower
+
+isPrefixSingleChars :: String -> Parser (Array String)
+isPrefixSingleChars prefix = do
+  s <- (many <<< string) prefix
+  guard $ length s > 0
+  pure s
+
+isAs :: Parser (Array String)
+isAs = isPrefixSingleChars "a"
+
+isBs :: Parser (Array String)
+isBs = isPrefixSingleChars "b"
+
+isAsThenBs :: String -> Boolean
+isAsThenBs str = case runParser isAs str of
+  (Left _) -> false
+  (Right (Tuple (Tuple _ bs) _)) ->
+    case runParser isBs bs of
+      (Left _) -> false
+      (Right (Tuple (Tuple _ "") _)) -> true
+      (Right (Tuple (Tuple _ _ ) _)) -> false
+
+isAsOrBs :: String -> Boolean
+isAsOrBs str = case runParser (many (isAs <|> isBs)) str of
+  (Right (Tuple (Tuple _ "") _)) -> true
+  _ -> false
