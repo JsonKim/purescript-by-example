@@ -3,9 +3,13 @@ module Files where
 import Prelude
 
 import Control.Monad.Cont (ContT(..))
+import Control.Monad.Except (ExceptT(..), runExceptT)
+import Data.Array (concat, fold)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn3, Fn4, runFn3, runFn4)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
+import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Types (Async)
@@ -53,3 +57,25 @@ concatFilesCont src1 src2 dest = do
     Tuple (Left err) _ -> pure $ Left err
     Tuple _ (Left err) -> pure $ Left err
     Tuple (Right c1) (Right c2) -> writeFileCont dest $ c1 <> c2
+
+readFileContEx :: FilePath -> ExceptT ErrorCode Async String
+readFileContEx path = ExceptT $ readFileCont path
+
+writeFileContEx :: FilePath -> String -> ExceptT ErrorCode Async Unit
+writeFileContEx path text = ExceptT $ writeFileCont path text
+
+copyFileContEx :: FilePath -> FilePath -> ExceptT ErrorCode Async Unit
+copyFileContEx src desc = do
+  content <- readFileContEx src
+  writeFileContEx src content
+
+concatFileContEx :: FilePath -> FilePath -> FilePath -> ExceptT ErrorCode Async Unit
+concatFileContEx src1 src2 dest = do
+  c1 <- readFileContEx src1
+  c2 <- readFileContEx src2
+  writeFileContEx dest $ c1 <> c2
+
+concatenateMany :: Array FilePath -> FilePath -> ExceptT ErrorCode Async Unit
+concatenateMany paths dest = do
+  contents <- traverse readFileContEx paths
+  writeFileContEx dest $ fold contents
