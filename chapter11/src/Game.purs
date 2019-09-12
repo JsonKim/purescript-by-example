@@ -91,11 +91,15 @@ game ["use", item] =
         then use gameItem
         else tell (L.singleton "You don't have that item.")
 game ["cheat"] = do
-  GameState state <- get
-  put $ GameState state
-    { items = M.empty
-    , inventory = foldr S.union S.empty state.items
-    }
+  GameEnvironment env <- ask
+  if env.cheatMode
+    then do
+      GameState state <- get
+      put $ GameState state
+        { items = M.empty
+        , inventory = foldr S.union S.empty state.items
+        }
+    else throwError (L.singleton "Not running in cheat mode.")
 game ["debug"] = do
   GameEnvironment env <- ask
   if env.debugMode
