@@ -2,12 +2,18 @@ module Main where
 
 import Prelude
 
+import Control.Monad.RWS (RWSResult(..), runRWS)
 import Data.Either (Either(..))
+import Data.Foldable (for_)
 import Data.GameEnvironment (GameEnvironment, gameEnvironment)
+import Data.GameState (GameState, initialGameState)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (wrap)
+import Data.String (split)
 import Effect (Effect)
 import Effect.Console (log)
-import Node.ReadLine (close, createConsoleInterface, noCompletion, prompt, setLineHandler, setPrompt)
+import Game (game)
+import Node.ReadLine (createConsoleInterface, noCompletion, prompt, setLineHandler, setPrompt)
 import Node.Yargs.Applicative (Y, flag, runY, yarg)
 import Node.Yargs.Setup (usage)
 
@@ -17,15 +23,15 @@ runGame env = do
   setPrompt "> " 2 interface
 
   let
-    lineHandler :: String -> Effect Unit
-    lineHandler input =
-      if input == "quit"
-        then close interface
-        else do
-          log $ "You typed: " <> input
-          prompt interface
+    lineHandler :: GameState -> String -> Effect Unit
+    lineHandler currentState input = do
+      case runRWS (game (split (wrap " ") input)) env currentState of
+        RWSResult state _ written -> do
+          for_ written log
+          setLineHandler interface $ lineHandler state
+      prompt interface
 
-  setLineHandler interface lineHandler
+  setLineHandler interface $ lineHandler initialGameState
   prompt interface
 
 main :: Effect Unit
