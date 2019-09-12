@@ -2,13 +2,14 @@ module Main where
 
 import Prelude
 
-import Control.Monad.RWS (RWSResult(..), runRWS)
+import Control.Monad.Except (runExceptT)
+import Control.Monad.RWS (RWSResult(..), runRWST)
 import Data.Either (Either(..))
 import Data.Foldable (for_)
 import Data.GameEnvironment (GameEnvironment, gameEnvironment)
 import Data.GameState (GameState, initialGameState)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (wrap)
+import Data.Newtype (unwrap, wrap)
 import Data.String (split)
 import Effect (Effect)
 import Effect.Console (log)
@@ -25,8 +26,9 @@ runGame env = do
   let
     lineHandler :: GameState -> String -> Effect Unit
     lineHandler currentState input = do
-      case runRWS (game (split (wrap " ") input)) env currentState of
-        RWSResult state _ written -> do
+      case unwrap $ runExceptT $ runRWST (game (split (wrap " ") input)) env currentState of
+        Left logs -> for_ (map ((<>) "[error] ") logs) log
+        Right (RWSResult state _ written) -> do
           for_ written log
           setLineHandler interface $ lineHandler state
       prompt interface

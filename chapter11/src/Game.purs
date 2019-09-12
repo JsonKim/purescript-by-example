@@ -2,12 +2,14 @@ module Game where
 
 import Prelude
 
-import Control.Monad.RWS (RWS, ask, get, modify_, put, tell)
+import Control.Monad.Except (ExceptT, throwError)
+import Control.Monad.RWS (RWST, ask, get, modify_, put, tell)
 import Data.Coords (Coords(..), coords, prettyPrintCoords)
 import Data.Foldable (foldr, for_)
 import Data.GameEnvironment (GameEnvironment(..))
 import Data.GameItem (GameItem(..), readItem)
 import Data.GameState (GameState(..))
+import Data.Identity (Identity)
 import Data.List as L
 import Data.Map as M
 import Data.Maybe (Maybe(..))
@@ -15,7 +17,7 @@ import Data.Set as S
 
 type Log = L.List String
 
-type Game = RWS GameEnvironment Log GameState
+type Game = RWST GameEnvironment Log GameState (ExceptT Log Identity)
 
 has :: GameItem -> Game Boolean
 has item = do
@@ -88,12 +90,18 @@ game ["use", item] =
       if hasItem
         then use gameItem
         else tell (L.singleton "You don't have that item.")
+game ["cheat"] = do
+  GameState state <- get
+  put $ GameState state
+    { items = M.empty
+    , inventory = foldr S.union S.empty state.items
+    }
 game ["debug"] = do
   GameEnvironment env <- ask
   if env.debugMode
     then do
       state :: GameState <- get
       tell (L.singleton (show state))
-    else tell (L.singleton "Not running in debug mode.")
+    else throwError (L.singleton "Not running in debug mode.")
 game [] = pure unit
 game _  = tell (L.singleton "I don't understand.")
