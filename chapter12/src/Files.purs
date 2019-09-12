@@ -44,3 +44,12 @@ copyFileCont src dest = do
   case e of
     Left err -> pure $ Left err
     Right content -> writeFileCont dest content
+
+concatFilesCont :: FilePath -> FilePath -> FilePath -> Async (Either ErrorCode Unit)
+concatFilesCont src1 src2 dest = do
+  e1 <- readFileCont src1
+  e2 <- readFileCont src2
+  case Tuple e1 e2 of
+    Tuple (Left err) _ -> pure $ Left err
+    Tuple _ (Left err) -> pure $ Left err
+    Tuple (Right c1) (Right c2) -> writeFileCont dest $ c1 <> c2
