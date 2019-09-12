@@ -8,6 +8,7 @@ You can edit this file as you like.
     [ "console"
     , "effect"
     , "node-readline"
+    , "ordered-collections"
     , "psci-support"
     , "transformers"
     , "yargs"
