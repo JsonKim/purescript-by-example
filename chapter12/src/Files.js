@@ -19,7 +19,7 @@ exports.writeFileImpl = (path, data, onSuccess, onFailure) =>
         onFailure(error.code)();
       }
       else {
-        onSuccess()();
+        onSuccess();
       }
     });
   };
