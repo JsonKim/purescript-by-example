@@ -9,6 +9,7 @@ You can edit this file as you like.
     , "console"
     , "effect"
     , "functions"
+    , "parallel"
     , "psci-support"
     , "transformers"
     ]
