@@ -6,7 +6,9 @@ import Data.Array (intersect, sort)
 import Data.List (List(..), fromFoldable)
 import Effect (Effect)
 import Merge (merge, mergePoly)
+import Sorted (sorted)
 import Test.QuickCheck ((<?>), quickCheck)
+import Tree (Tree, insert, member)
 
 isSorted :: forall a. (Ord a) => Array a -> Boolean
 isSorted = go <<< fromFoldable
@@ -23,10 +25,13 @@ ints = identity
 bools :: Array Boolean -> Array Boolean
 bools = identity
 
+treeOfInt :: Tree Number -> Tree Number
+treeOfInt = identity
+
 main :: Effect Unit
 main = do
-  quickCheck \xs ys -> (isSorted $ merge (sort xs) (sort ys))
-    <?> "머지 결과가 정렬되지 않았습니다. " <> show (sort xs) <> ", " <> show (sort ys)
+  quickCheck \xs ys -> (isSorted $ merge (sorted xs) (sorted ys))
+    <?> "머지 결과가 정렬되지 않았습니다. " <> show xs <> ", " <> show ys
 
   quickCheck \xs ys -> xs `isSubarrayOf` merge xs ys
     <?> "xs가 머지 결과의 부분 배열이 아닙니다. " <> show xs <> ", " <> show ys
@@ -48,3 +53,5 @@ main = do
 
   quickCheck \xs ys -> isSorted $ bools $ mergePoly (sort xs) (sort ys)
   quickCheck \xs ys -> bools xs `isSubarrayOf` mergePoly xs ys
+
+  quickCheck \t a -> member a $ insert a $ treeOfInt t
