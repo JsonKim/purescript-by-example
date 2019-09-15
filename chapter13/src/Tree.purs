@@ -3,7 +3,7 @@ module Tree where
 import Prelude
 
 import Data.Foldable (foldr)
-import Test.QuickCheck (class Arbitrary, arbitrary)
+import Test.QuickCheck (class Arbitrary, class Coarbitrary, arbitrary, coarbitrary)
 
 data Tree a
   = Leaf
@@ -11,6 +11,13 @@ data Tree a
 
 instance arbTree :: (Arbitrary a, Ord a) => Arbitrary (Tree a) where
   arbitrary = map fromArray arbitrary
+
+instance coarbTree :: (Coarbitrary a) => Coarbitrary (Tree a) where
+  coarbitrary Leaf = identity
+  coarbitrary (Branch l a r) =
+    coarbitrary l <<<
+    coarbitrary a <<<
+    coarbitrary r
 
 insert :: forall a. (Ord a) => a -> Tree a -> Tree a
 insert a Leaf = Branch Leaf a Leaf
@@ -29,3 +36,7 @@ toArray (Branch l a r) = toArray l <> [a] <> toArray r
 
 fromArray :: forall a. (Ord a) => Array a -> Tree a
 fromArray = foldr insert Leaf
+
+anywhere :: forall a. (Tree a -> Boolean) -> Tree a -> Boolean
+anywhere f Leaf = f Leaf
+anywhere f t@(Branch l _ r) = anywhere f l || f t || anywhere f r
