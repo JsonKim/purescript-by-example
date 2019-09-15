@@ -3,6 +3,9 @@ module Data.DOM.Smart
   , Attribute
   , Content
   , AttributeKey
+  , Measure
+  , class IsValue
+  , toValue
   
   , a
   , p
@@ -18,7 +21,8 @@ module Data.DOM.Smart
   , text
   , elem
 
-  -- , render
+  , render
+  , test
   ) where
 
 import Prelude
@@ -41,9 +45,24 @@ newtype Attribute = Attribute
   , value :: String
   }
 
-newtype AttributeKey = AttributeKey String
+newtype AttributeKey a = AttributeKey String
 
-infix 4 attribute as :=
+data Measure
+  = Pixel Int
+  | Percentage Int
+
+class IsValue a where
+  toValue :: a -> String
+
+instance stringIsValue :: IsValue String where
+  toValue = identity
+
+instance intIsValue :: IsValue Int where
+  toValue = show
+
+instance measureIsValue :: IsValue Measure where
+  toValue (Pixel m) = show m <> "px"
+  toValue (Percentage m) = show m <> "%"
 
 element :: String -> Array Attribute -> Maybe (Array Content) -> Element
 element name attribs content = Element { name, attribs, content }
@@ -54,8 +73,10 @@ text = TextContent
 elem :: Element -> Content
 elem = ElementContent
 
-attribute :: AttributeKey -> String -> Attribute
-attribute (AttributeKey key) value = Attribute { key, value }
+attribute :: forall a. IsValue a => AttributeKey a -> a -> Attribute
+attribute (AttributeKey key) value = Attribute { key, value: toValue value }
+
+infix 4 attribute as :=
 
 a :: Array Attribute -> Array Content -> Element
 a attribs content = element "a" attribs $ Just content
@@ -66,19 +87,19 @@ p attribs content = element "p" attribs $ Just content
 img :: Array Attribute-> Element
 img attribs = element "img" attribs Nothing
 
-href :: AttributeKey
+href :: AttributeKey String
 href = AttributeKey "href"
 
-_class :: AttributeKey
+_class :: AttributeKey String
 _class = AttributeKey "class"
 
-src :: AttributeKey
+src :: AttributeKey String
 src = AttributeKey "src"
 
-width :: AttributeKey
+width :: AttributeKey Measure
 width = AttributeKey "width"
 
-height :: AttributeKey
+height :: AttributeKey Measure
 height = AttributeKey "height"
 
 render :: Element -> String
@@ -99,3 +120,10 @@ render (Element e) =
         renderContentItem :: Content -> String
         renderContentItem (TextContent s) = s
         renderContentItem (ElementContent e') = render e'
+
+test :: String
+test = render $ img
+        [ src := "cat.jpg"
+        , width := Pixel 100
+        , height := Percentage 50
+        ]
