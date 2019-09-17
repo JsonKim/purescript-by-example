@@ -2,6 +2,7 @@ module Data.DOM.Smart
   ( Element
   , Attribute
   , Content
+  , ContentF
   , AttributeKey
   , Measure
   , class IsValue
@@ -27,18 +28,28 @@ module Data.DOM.Smart
 
 import Prelude
 
+import Control.Monad.Free (Free, liftF, runFreeM)
+import Control.Monad.Writer (Writer, execWriter, tell)
+import Data.Foldable (for_)
 import Data.Maybe (Maybe(..))
-import Data.String (joinWith)
 
 newtype Element = Element
   { name    :: String
   , attribs :: Array Attribute
-  , content :: Maybe (Array Content)
+  , content :: Maybe (Content Unit)
   }
 
-data Content
-  = TextContent String
-  | ElementContent Element
+data ContentF a
+  = TextContent String a
+  | ElementContent Element a
+  | CommentContent String a
+
+instance functorContentF :: Functor ContentF where
+  map f (TextContent s x) = TextContent s (f x)
+  map f (ElementContent e x) = ElementContent e (f x)
+  map f (CommentContent c x) = CommentContent c (f x)
+
+type Content = Free ContentF
 
 newtype Attribute = Attribute
   { key   :: String
@@ -64,24 +75,27 @@ instance measureIsValue :: IsValue Measure where
   toValue (Pixel m) = show m <> "px"
   toValue (Percentage m) = show m <> "%"
 
-element :: String -> Array Attribute -> Maybe (Array Content) -> Element
+element :: String -> Array Attribute -> Maybe (Content Unit) -> Element
 element name attribs content = Element { name, attribs, content }
 
-text :: String -> Content
-text = TextContent
+text :: String -> Content Unit
+text s = liftF $ TextContent s unit
 
-elem :: Element -> Content
-elem = ElementContent
+comment :: String -> Content Unit
+comment s = liftF $ CommentContent s unit
+
+elem :: Element -> Content Unit
+elem e = liftF $ ElementContent e unit
 
 attribute :: forall a. IsValue a => AttributeKey a -> a -> Attribute
 attribute (AttributeKey key) value = Attribute { key, value: toValue value }
 
 infix 4 attribute as :=
 
-a :: Array Attribute -> Array Content -> Element
+a :: Array Attribute -> Content Unit -> Element
 a attribs content = element "a" attribs $ Just content
 
-p :: Array Attribute -> Array Content -> Element
+p :: Array Attribute -> Content Unit -> Element
 p attribs content = element "p" attribs $ Just content
 
 img :: Array Attribute-> Element
@@ -103,27 +117,45 @@ height :: AttributeKey Measure
 height = AttributeKey "height"
 
 render :: Element -> String
-render (Element e) =
-    "<" <> e.name <>
-    " " <> joinWith " " (map renderAttribute e.attribs) <>
-    renderContent e.content
+render = execWriter <<< renderElement
   where
-    renderAttribute :: Attribute -> String
-    renderAttribute (Attribute x) = x.key <> "=\"" <> x.value <> "\""
-
-    renderContent :: Maybe (Array Content) -> String
-    renderContent Nothing = " />"
-    renderContent (Just content) =
-        ">" <> joinWith "" (map renderContentItem content) <>
-        "</" <> e.name <> ">"
+    renderElement :: Element -> Writer String Unit
+    renderElement (Element e) = do
+        tell "<"
+        tell e.name
+        for_ e.attribs $ \x -> do
+          tell " "
+          renderAttribute x
+        renderContent e.content
       where
-        renderContentItem :: Content -> String
-        renderContentItem (TextContent s) = s
-        renderContentItem (ElementContent e') = render e'
+        renderAttribute :: Attribute -> Writer String Unit
+        renderAttribute (Attribute x) = do
+          tell x.key
+          tell "=\""
+          tell x.value
+          tell "\""
+
+        renderContent :: Maybe (Content Unit) -> Writer String Unit
+        renderContent Nothing = tell " />"
+        renderContent (Just content) = do
+            tell ">"
+            runFreeM renderContentItem content
+            tell "</"
+            tell e.name
+            tell ">"
+          where
+            renderContentItem :: forall a. ContentF (Content a) -> Writer String (Content a)
+            renderContentItem (TextContent s rest) = do
+              tell s
+              pure rest
+            renderContentItem (ElementContent e' rest) = do
+              renderElement e'
+              pure rest
+            renderContentItem (CommentContent c rest) = do
+              tell $ "<!-- " <> c <> " -->"
+              pure rest
 
 test :: String
-test = render $ img
-        [ src := "cat.jpg"
-        , width := Pixel 100
-        , height := Percentage 50
-        ]
+test = render $ p [] $ do
+  elem $ img [ src := "cat.jpg" ]
+  text "A cat"
