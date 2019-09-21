@@ -34,6 +34,7 @@ import Control.Monad.State (State, evalState, get, put)
 import Control.Monad.Writer (WriterT, execWriterT, tell)
 import Data.Foldable (for_)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype)
 
 newtype Element = Element
   { name    :: String
@@ -65,6 +66,7 @@ newtype Attribute = Attribute
   }
 
 newtype AttributeKey a = AttributeKey String
+derive instance newtypeAttribyteKey :: Newtype (AttributeKey a) _
 
 data Measure
   = Pixel Int
@@ -114,14 +116,14 @@ newName = liftF $ NewName identity
 
 infix 4 attribute as :=
 
-a :: Array Attribute -> Content Unit -> Element
-a attribs content = element "a" attribs $ Just content
+a :: Array Attribute -> Content Unit -> Content Unit
+a attribs content = elem $ element "a" attribs $ Just content
 
-p :: Array Attribute -> Content Unit -> Element
-p attribs content = element "p" attribs $ Just content
+p :: Array Attribute -> Content Unit -> Content Unit
+p attribs content = elem $ element "p" attribs $ Just content
 
-img :: Array Attribute-> Element
-img attribs = element "img" attribs Nothing
+img :: Array Attribute-> Content Unit
+img attribs = elem $ element "img" attribs Nothing
 
 href :: AttributeKey Href
 href = AttributeKey "href"
@@ -141,8 +143,8 @@ height = AttributeKey "height"
 name :: AttributeKey Name
 name = AttributeKey "name"
 
-render :: Element -> String
-render = \e -> evalState (execWriterT (renderElement e)) 0
+render :: forall a. Content a -> String
+render = \e -> evalState (execWriterT (runFreeM renderContentItem e)) 0
   where
     renderElement :: Element -> Interp Unit
     renderElement (Element e) = do
@@ -168,24 +170,29 @@ render = \e -> evalState (execWriterT (renderElement e)) 0
             tell "</"
             tell e.name
             tell ">"
-          where
-            renderContentItem :: forall a. ContentF (Content a) -> Interp (Content a)
-            renderContentItem (TextContent s rest) = do
-              tell s
-              pure rest
-            renderContentItem (ElementContent e' rest) = do
-              renderElement e'
-              pure rest
-            renderContentItem (CommentContent c rest) = do
-              tell $ "<!-- " <> c <> " -->"
-              pure rest
-            renderContentItem (NewName k) = do
-              n <- get
-              let fresh = Name $ "name" <> show n
-              put $ n + 1
-              pure (k fresh)
+
+    renderContentItem :: forall a. ContentF (Content a) -> Interp (Content a)
+    renderContentItem (TextContent s rest) = do
+      tell s
+      pure rest
+    renderContentItem (ElementContent e' rest) = do
+      renderElement e'
+      pure rest
+    renderContentItem (CommentContent c rest) = do
+      tell $ "<!-- " <> c <> " -->"
+      pure rest
+    renderContentItem (NewName k) = do
+      n <- get
+      let fresh = Name $ "name" <> show n
+      put $ n + 1
+      pure (k fresh)
 
 test :: String
 test = render $ p [] $ do
-  elem $ img [ src := "cat.jpg" ]
+  top <- newName
+  a [ name := top ] $
+    text "Top"
+  img [ src := "cat.jpg" ]
   text "A cat"
+  a [ href := AnchorHref top ] $
+    text "Back To Top"
